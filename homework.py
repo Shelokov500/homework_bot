@@ -92,8 +92,9 @@ def check_response(response):
 
 
 def parse_status(homework):
-    """Извлекает из информации о конкретной
-    домашней работе статус этой работы."""
+    """
+    Извлекает из информации о конкретной домашней работе статус этой работы.
+    """
     if homework is None:
         raise Exception('В запросе нет ни одной домашней работы')
     if 'homework_name' not in homework:
@@ -109,8 +110,7 @@ def parse_status(homework):
 
 
 def check_tokens():
-    """Проверяет доступность переменных окружения,
-    которые необходимы для работы программы"""
+    """Проверяет доступность переменных окружения"""
     return all([PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID])
 
 
