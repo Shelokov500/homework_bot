@@ -1,3 +1,3 @@
-class EnvironmentVariablesAreMissing(Exception):
-    """Исключение 'Отсутствуют переменные окружения.'"""
+class PracticeAPIError(Exception):
+    """Исключение ошибки API практикума."""
     pass

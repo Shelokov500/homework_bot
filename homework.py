@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 import time
 from http import HTTPStatus
 
@@ -36,7 +37,7 @@ formatter = logging.Formatter(
 )
 handler.setFormatter(formatter)
 
-HOMEWORK_STATUSES = {
+HOMEWORK_VERDICT = {
     'approved': 'Работа проверена: ревьюеру всё понравилось. Ура!',
     'reviewing': 'Работа взята на проверку ревьюером.',
     'rejected': 'Работа проверена: у ревьюера есть замечания.'
@@ -51,8 +52,8 @@ def send_message(bot, message):
             text=message,
         )
         logger.info(f'Сообщение {message} отправлено в чат')
-    except Exception as error:
-        logger.error(f'Ошибка при отправке сообщения в чат: {error}')
+    except telegram.TelegramError as error:
+        logger.error(error, exc_info=True)
 
 
 def get_api_answer(current_timestamp):
@@ -64,11 +65,13 @@ def get_api_answer(current_timestamp):
         if response.status_code != HTTPStatus.OK:
             message_error = f'Ошибка HTTPStatus: {response.status_code}'
             logger.error(message_error)
-            raise Exception(message_error)
+            raise exceptions.PracticeAPIError(message_error)
         return response.json()
+    except requests.exceptions.RequestException as error:
+        logger.error(error)
     except Exception as error:
         logger.error(error)
-        raise Exception(error)
+        raise exceptions.PracticeAPIError(error)
 
 
 def check_response(response):
@@ -101,9 +104,9 @@ def parse_status(homework):
         raise KeyError('Не найден "status" в ответе API')
     homework_name = homework['homework_name']
     homework_status = homework['status']
-    if homework_status not in HOMEWORK_STATUSES:
+    if homework_status not in HOMEWORK_VERDICT:
         raise Exception('Неизвестный статус работы')
-    verdict = HOMEWORK_STATUSES[homework_status]
+    verdict = HOMEWORK_VERDICT[homework_status]
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
@@ -117,7 +120,7 @@ def main():
     if not check_tokens():
         message_error = 'Проблема с переменными окружения!'
         logger.critical(message_error)
-        raise exceptions.EnvironmentVariablesAreMissing(message_error)
+        raise sys.exit(1)
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     current_timestamp = int(time.time())
     status = None
@@ -133,14 +136,13 @@ def main():
                 status = message
             else:
                 logger.info('Обновления статуса нет')
-            time.sleep(RETRY_TIME)
-
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
             if error_status != str(error):
                 error_status = str(error)
                 send_message(bot, message)
             logger.error(message)
+        finally:
             time.sleep(RETRY_TIME)
 
 
